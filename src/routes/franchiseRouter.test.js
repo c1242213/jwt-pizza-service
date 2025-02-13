@@ -3,7 +3,6 @@ const app = require('../service');
 const { Role, DB } = require('../database/database.js');
 const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
 let registerRes;
-let adminUserAuthToken;
 let testUserAuthToken;
 
 function randomName() {
@@ -45,7 +44,7 @@ test('createFranchise', async () =>{
     const admin = await createAdminUser();
     const loginAdmisRes = await request(app).put('/api/auth').send({email: admin.email, password: 'toomanysecrets'});
     expect(loginAdmisRes.status).toBe(200);
-    adminAuthToken = loginAdmisRes.body.token;
+    const adminAuthToken = loginAdmisRes.body.token;
 
     //create franchise
     const createFranchiseRes = await request(app).post('/api/franchise').set('Authorization', `Bearer ${adminAuthToken}`).send({name: 'pizodket', admins: [{email: admin.email}]});
@@ -62,7 +61,7 @@ test('createStore', async () =>{
     const admin = await createAdminUser();
     const loginAdmisRes = await request(app).put('/api/auth').send({email: admin.email, password: 'toomanysecrets'});
     expect(loginAdmisRes.status).toBe(200);
-    adminAuthToken = loginAdmisRes.body.token;
+    const adminAuthToken = loginAdmisRes.body.token;
 
     //create franchise 
     const createFranchiseRes = await request(app).post('/api/franchise').set('Authorization', `Bearer ${adminAuthToken}`).send({name: 'pizodket', admins: [{email: admin.email}]});

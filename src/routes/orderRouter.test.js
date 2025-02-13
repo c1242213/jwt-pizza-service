@@ -40,7 +40,7 @@ test('add item', async () =>{
     const admin = await createAdminUser();
     const loginAdmisRes = await request(app).put('/api/auth').send({email: admin.email, password: 'toomanysecrets'});        
     expect(loginAdmisRes.status).toBe(200);
-    adminAuthToken = loginAdmisRes.body.token;
+    const adminAuthToken = loginAdmisRes.body.token;
 
     //add item
     const addItemRes = await request(app).put('/api/order/menu').set('Authorization', `Bearer ${adminAuthToken}`).send(testItem);
@@ -53,7 +53,7 @@ test('get orders', async () =>{
     const admin = await createAdminUser();
     const loginAdmisRes = await request(app).put('/api/auth').send({email: admin.email, password: 'toomanysecrets'});        
     expect(loginAdmisRes.status).toBe(200);
-    adminAuthToken = loginAdmisRes.body.token;
+    const adminAuthToken = loginAdmisRes.body.token;
 
     //get orders
     const getOrdersRes = await request(app).get('/api/order').set('Authorization', `Bearer ${adminAuthToken}`);
