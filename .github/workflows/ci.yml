@@ -96,6 +96,7 @@ jobs:
     env:
       version: ${{needs.build.outputs.version}}
 
+
     steps:
       - name: Download distribution artifact
         uses: actions/download-artifact@v4
@@ -115,7 +116,7 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.CI_IAM_ROLE }}    
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@v2 
       - name: Set up machine emulation
         uses: docker/setup-qemu-action@v3
 
