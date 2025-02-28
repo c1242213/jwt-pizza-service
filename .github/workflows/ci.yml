@@ -87,6 +87,16 @@ jobs:
         with:
           name: package
           path: dist/
+
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    needs: build
+    env:
+      version: ${{needs.build.outputs.version}}
+
+    steps:
       - name: Download distribution artifact
         uses: actions/download-artifact@v4
         with:
@@ -119,12 +129,5 @@ jobs:
           ECR_REPOSITORY: 'jwt-pizza-service'
         run: |
           docker build --platform=linux/arm64 -t $ECR_REGISTRY/$ECR_REPOSITORY --push .
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >>  $GITHUB_OUTPUT    
-           
-  deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    needs: build
-    env:
-      version: ${{needs.build.outputs.version}}
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >>  $GITHUB_OUTPUT
+              
