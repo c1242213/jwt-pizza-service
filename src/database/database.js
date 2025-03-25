@@ -4,6 +4,8 @@ const config = require('../config.js');
 const { StatusCodeError } = require('../endpointHelper.js');
 const { Role } = require('../model/model.js');
 const dbModel = require('./dbModel.js');
+const logger = require('../logger');
+
 class DB {
   constructor() {
     this.initialized = this.initializeDatabase();
@@ -284,11 +286,30 @@ class DB {
     return '';
   }
 
-  async query(connection, sql, params) {
-    const [results] = await connection.execute(sql, params);
-    return results;
-  }
+  // async query(connection, sql, params) {
+  //   const [results] = await connection.execute(sql, params);
+  //   return results;
+  // }
 
+  async query(connection, sql, params) {
+    try {
+      const [results] = await connection.execute(sql, params);
+      logger.log('info', 'db-query', {
+        sql: logger.sanitize(sql),
+        params: logger.sanitize(JSON.stringify(params || [])),
+        rowCount: results.length || (results.insertId ? 1 : 0)
+      });
+      return results;
+    } catch (err) {
+      logger.log('error', 'db-query', {
+        sql: logger.sanitize(sql),
+        params: logger.sanitize(JSON.stringify(params || [])),
+        error: err.message
+      });
+      throw err;
+    }
+  }
+  
   async getID(connection, key, value, table) {
     const [rows] = await connection.execute(`SELECT id FROM ${table} WHERE ${key}=?`, [value]);
     if (rows.length > 0) {

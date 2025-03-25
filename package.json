@@ -15,7 +15,9 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.12.0"
+    "mysql2": "^3.12.0",
+    "node-fetch": "^2.7.0",
+    "pizza-logger": "^1.0.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
