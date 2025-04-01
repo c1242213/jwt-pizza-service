@@ -11,6 +11,7 @@ class Metrics {
         this.methodCounters = new Map();
         this.pizzaPurchases = 0;
         this.pizzaRevenue = 0;
+        this.failedPizzaPurchases = 0;
         this.activeUsers = new Set();
         this.sendMetricsPeriodically(10000);
     }
@@ -89,58 +90,93 @@ class Metrics {
 
         // Special handling for pizza orders
         if (method === 'POST' && route === '/api/order') {
-            if (req.body && req.body.items) {
-                const items = req.body.items;
-                const orderTotal = items.reduce((sum, item) => sum + (item.price || 0), 0);
-                this.pizzaPurchases += items.length;
-                this.pizzaRevenue += orderTotal;
-                console.log(`Pizza order detected: ${items.length} pizzas, Revenue: ${orderTotal}`);
-            } else {
-                console.log('No items found in /api/order request body:', req.body);
-            }
+          if (req.body && req.body.items) {
+              const items = req.body.items;
+              const orderTotal = items.reduce((sum, item) => sum + (item.price || 0), 0);
+              
+              res.on('finish', () => {
+                  const [seconds, nanoseconds] = process.hrtime(start);
+                  const latencyMs = (seconds * 1000) + (nanoseconds / 1000000);
+  
+                  if (res.statusCode === 200) {
+                      // Successful purchase
+                      this.pizzaPurchases += items.length;
+                      this.pizzaRevenue += orderTotal;
+                      console.log(`Pizza order detected: ${items.length} pizzas, Revenue: ${orderTotal}`);
+                  } else {
+                      // Failed purchase
+                      this.failedPizzaPurchases += items.length;
+                      console.log(`Failed pizza order detected: ${items.length} pizzas, Status: ${res.statusCode}`);
+                  }
+  
+                  // ... existing latency metrics ...
+  
+                  // Send failed purchases metric after each attempt
+                  this.sendMetricToGrafana(
+                      'pizza_purchases_failed_total',
+                      this.failedPizzaPurchases,
+                      'sum',
+                      '1'
+                  );
+              });
+          } else {
+              // Count as failed if no items in order
+              res.on('finish', () => {
+                  if (res.statusCode !== 200 || !req.body.items) {
+                      this.failedPizzaPurchases += 1;
+                      console.log('Failed pizza order: No items found in request body');
+                      this.sendMetricToGrafana(
+                          'pizza_purchases_failed_total',
+                          this.failedPizzaPurchases,
+                          'sum',
+                          '1'
+                      );
+                  }
+              });
+              console.log('No items found in /api/order request body:', req.body);
+          }
+      } else {
+          res.on('finish', () => {
+              const [seconds, nanoseconds] = process.hrtime(start);
+              const latencyMs = (seconds * 1000) + (nanoseconds / 1000000);
+
+              // Send total requests metric (all methods combined for this route)
+              this.sendMetricToGrafana(
+                  'http_requests_total',
+                  this.requestCounters.get(requestKey),
+                  'sum',
+                  '1'
+              );
+
+              // Send method-specific total
+              this.sendMetricToGrafana(
+                  `http_${method.toLowerCase()}_requests_total`,
+                  this.methodCounters.get(method),
+                  'sum',
+                  '1'
+              );
+
+              // Send latency metric
+              this.sendMetricToGrafana(
+                  'http_request_latency_ms',
+                  Math.round(latencyMs),
+                  'gauge',
+                  'ms'
+              );
+
+              // Send pizza order latency
+              if (method === 'POST' && route === '/api/order') {
+                  this.sendMetricToGrafana(
+                      'pizza_order_latency_ms',
+                      Math.round(latencyMs),
+                      'gauge',
+                      'ms'
+                  );
+              }
+          });
         }
-
-        res.on('finish', () => {
-            const [seconds, nanoseconds] = process.hrtime(start);
-            const latencyMs = (seconds * 1000) + (nanoseconds / 1000000);
-
-            // Send total requests metric (all methods combined for this route)
-            this.sendMetricToGrafana(
-                'http_requests_total',
-                this.requestCounters.get(requestKey),
-                'sum',
-                '1'
-            );
-
-            // Send method-specific total
-            this.sendMetricToGrafana(
-                `http_${method.toLowerCase()}_requests_total`,
-                this.methodCounters.get(method),
-                'sum',
-                '1'
-            );
-
-            // Send latency metric
-            this.sendMetricToGrafana(
-                'http_request_latency_ms',
-                Math.round(latencyMs),
-                'gauge',
-                'ms'
-            );
-
-            // Send pizza order latency
-            if (method === 'POST' && route === '/api/order') {
-                this.sendMetricToGrafana(
-                    'pizza_order_latency_ms',
-                    Math.round(latencyMs),
-                    'gauge',
-                    'ms'
-                );
-            }
-        });
-
         next();
-    }
+      }
 
     sendMetricsPeriodically(period) {
         setInterval(() => {
