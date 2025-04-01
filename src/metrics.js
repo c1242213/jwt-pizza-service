@@ -59,7 +59,7 @@ class Metrics {
                 console.error(`Failed to push metrics data to Grafana: ${text}\n${body}`);
               });
             } else {
-              console.log(`Pushed ${metricName}`);
+              // console.log(`Pushed ${metricName}`);
             }
           })
           .catch((error) => {
@@ -95,8 +95,6 @@ class Metrics {
               const orderTotal = items.reduce((sum, item) => sum + (item.price || 0), 0);
               
               res.on('finish', () => {
-                  const [seconds, nanoseconds] = process.hrtime(start);
-                  const latencyMs = (seconds * 1000) + (nanoseconds / 1000000);
   
                   if (res.statusCode === 200) {
                       // Successful purchase

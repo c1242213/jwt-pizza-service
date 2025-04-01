@@ -49,7 +49,7 @@ app.use('*', (req, res) => {
 });
 
 // Default error handler for all exceptions and errors
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
   const statusCode = err.statusCode ?? 500;
   logger.log('error', 'exception', { 
     message: err.message, 
