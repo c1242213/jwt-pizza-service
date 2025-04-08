@@ -177,26 +177,29 @@ class Metrics {
       }
 
     sendMetricsPeriodically(period) {
-        setInterval(() => {
-            try {
-                const cpuUsage = this.getCpuUsagePercentage();
-                const memoryUsage = this.getMemoryUsagePercentage();
-                
-                this.sendMetricToGrafana('cpu_usage_percentage', Math.round(cpuUsage), 'gauge', '%');
-                this.sendMetricToGrafana('memory_usage_percentage', Math.round(memoryUsage), 'gauge', '%');
-                
-                // Send active users count periodically
-                this.sendMetricToGrafana('active_users', this.activeUsers.size, 'gauge', 'users');
-
-                this.sendMetricToGrafana('pizza_purchases_total', this.pizzaPurchases, 'sum', '1');
-                this.sendMetricToGrafana('pizza_revenue_total', Math.round(this.pizzaRevenue * 100), 'sum', '1');
-                
-                // Optional: Clear active users periodically if you want to track only recent activity
-                // this.activeUsers.clear();
-            } catch (error) {
-                console.error('Error sending metrics:', error);
-            }
-        }, period);
+      setInterval(() => {
+        try {
+          const cpuUsage = this.getCpuUsagePercentage();
+          const memoryUsage = this.getMemoryUsagePercentage();
+          
+          this.sendMetricToGrafana('cpu_usage_percentage', Math.round(cpuUsage), 'gauge', '%');
+          this.sendMetricToGrafana('memory_usage_percentage', Math.round(memoryUsage), 'gauge', '%');
+          
+          // Send active users count periodically
+          this.sendMetricToGrafana('active_users', this.activeUsers.size, 'gauge', 'users');
+    
+          // Clear active users every 5 minutes to avoid accumulation
+          if (Date.now() % (5 * 60 * 1000) < period) {
+            this.activeUsers.clear();
+            console.log('Cleared active users set');
+          }
+    
+          this.sendMetricToGrafana('pizza_purchases_total', this.pizzaPurchases, 'sum', '1');
+          this.sendMetricToGrafana('pizza_revenue_total', Math.round(this.pizzaRevenue * 100), 'sum', '1');
+        } catch (error) {
+          console.error('Error sending metrics:', error);
+        }
+      }, period);
     }
 
 
