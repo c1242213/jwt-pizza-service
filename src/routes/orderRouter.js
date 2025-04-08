@@ -4,7 +4,7 @@
 // const { authRouter } = require('./authRouter.js');
 // const { asyncHandler, StatusCodeError } = require('../endpointHelper.js');
 // const logger = require('../logger');
-// const fetch = require('node-fetch');
+// const fetch = require('node-fetch'); 
 
 // const orderRouter = express.Router();
 
@@ -58,7 +58,6 @@
 //     if (!req.user.isRole(Role.Admin)) {
 //       throw new StatusCodeError('unable to add menu item', 403);
 //     }
-
 //     const addMenuItemReq = req.body;
 //     await DB.addMenuItem(addMenuItemReq);
 //     res.send(await DB.getMenu());
@@ -81,21 +80,44 @@
 //   asyncHandler(async (req, res) => {
 //     const orderReq = req.body;
 //     const order = await DB.addDinerOrder(req.user, orderReq);
-//     const r = await fetch(`${config.factory.url}/api/order`, {
-//       method: 'POST',
-//       headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },
-//       body: JSON.stringify({ diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order }),
-//     });
-//     const j = await r.json();
-//     if (r.ok) {
-//       res.send({ order, reportSlowPizzaToFactoryUrl: j.reportUrl, jwt: j.jwt });
-//     } else {
-//       res.status(500).send({ message: 'Failed to fulfill order at factory', reportPizzaCreationErrorToPizzaFactoryUrl: j.reportUrl });
+//     const factoryUrl = `${config.factory.url}/api/order`;
+//     try {
+//       const r = await fetch(factoryUrl, {
+//         method: 'POST',
+//         headers: { 
+//           'Content-Type': 'application/json', 
+//           authorization: `Bearer ${config.factory.apiKey}` 
+//         },
+//         body: JSON.stringify({ diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order }),
+//       });
+//       const j = await r.json();
+
+//       logger.log(r.ok ? 'info' : 'error', 'factory-request', {
+//         method: 'POST',
+//         url: factoryUrl,
+//         statusCode: r.status,
+//         reqBody: logger.sanitize(JSON.stringify({ diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order })),
+//         resBody: logger.sanitize(JSON.stringify(j))
+//       });
+
+//       if (r.ok) {
+//         res.send({ order, reportSlowPizzaToFactoryUrl: j.reportUrl, jwt: j.jwt });
+//       } else {
+//         res.status(500).send({ message: 'Failed to fulfill order at factory', reportPizzaCreationErrorToPizzaFactoryUrl: j.reportUrl });
+//       }
+//     } catch (err) {
+//       logger.log('error', 'factory-request', {
+//         method: 'POST',
+//         url: factoryUrl,
+//         error: err.message
+//       });
+//       res.status(500).send({ message: 'Factory request failed', error: err.message });
 //     }
 //   })
 // );
 
 // module.exports = orderRouter;
+
 
 const express = require('express');
 const config = require('../config.js');
@@ -106,6 +128,9 @@ const logger = require('../logger');
 const fetch = require('node-fetch'); 
 
 const orderRouter = express.Router();
+
+// Add chaos variable
+let enableChaos = false;
 
 orderRouter.endpoints = [
   {
@@ -172,6 +197,14 @@ orderRouter.get(
   })
 );
 
+// Add chaos middleware to POST /api/order
+orderRouter.post('/', (req, res, next) => {
+  if (enableChaos && Math.random() < 0.5) {
+    throw new StatusCodeError('Chaos monkey', 500);
+  }
+  next();
+});
+
 // createOrder
 orderRouter.post(
   '/',
@@ -212,6 +245,18 @@ orderRouter.post(
       });
       res.status(500).send({ message: 'Factory request failed', error: err.message });
     }
+  })
+);
+
+// Add chaos injection endpoint (PUT /chaos/:state)
+orderRouter.put(
+  '/chaos/:state',
+  authRouter.authenticateToken,
+  asyncHandler(async (req, res) => {
+    if (req.user.isRole(Role.Admin)) {
+      enableChaos = req.params.state === 'true';
+    }
+    res.json({ chaos: enableChaos });
   })
 );
 
