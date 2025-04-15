@@ -77,20 +77,21 @@ class DB {
     }
   }
 
-  async updateUser(userId, email, password) {
+  async updateUser(userId, email, password) { //logic for fixing the sql injection
     const connection = await this.getConnection();
     try {
-      const params = [];
+      const params = [], values = [];
       if (password) {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        params.push(`password='${hashedPassword}'`);
+        params.push(`password=?`);
+        values.push(await bcrypt.hash(password, 10));
       }
       if (email) {
-        params.push(`email='${email}'`);
+        params.push(`email=?`);
+        values.push(email);
       }
       if (params.length > 0) {
-        const query = `UPDATE user SET ${params.join(', ')} WHERE id=${userId}`;
-        await this.query(connection, query);
+        values.push(userId);
+        await this.query(connection, `UPDATE user SET ${params.join(', ')} WHERE id=?`, values);
       }
       return this.getUser(email, password);
     } finally {

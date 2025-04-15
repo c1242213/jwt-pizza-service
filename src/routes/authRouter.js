@@ -116,7 +116,7 @@ authRouter.put(
 );
 
 async function setAuth(user) {
-  const token = jwt.sign(user, config.jwtSecret);
+  const token = jwt.sign(user, config.jwtSecret, { expiresIn: '1h' }); // include expiration period for penetration test
   await DB.loginUser(user.id, token);
   return token;
 }
